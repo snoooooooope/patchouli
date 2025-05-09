@@ -8,16 +8,13 @@
 
 set -euo pipefail
 
-# Default PREFIX if not set (matches Makefile default)
+# set default PREFIX if not set , then determine if the script was installed globally or locally
 : "${PREFIX:=/usr/local}"
 
-# Determine paths
 if [[ "$(dirname "$0")" == "$PREFIX/bin" ]]; then
-    # Running from installed location
     BASEDIR="$PREFIX/lib/patchouli"
     CONFDIR="$PREFIX/etc/patchouli"
 else
-    # Running from source
     BASEDIR="$(dirname "$0")/.."
     CONFDIR="$BASEDIR/config"
 fi
