@@ -8,24 +8,38 @@
 
 set -euo pipefail
 
-source "$(dirname "$0")/../lib/core/error_handling.sh"
-source "$(dirname "$0")/../lib/core/helpers.sh"
-source "$(dirname "$0")/../lib/core/logging.sh"
+# Default PREFIX if not set (matches Makefile default)
+: "${PREFIX:=/usr/local}"
 
-source "$(dirname "$0")/../config/colors.conf" || error_exit "Failed to load color configuration" $ERROR_CONFIG
-source "$(dirname "$0")/../config/defaults.conf" || error_exit "Failed to load default configuration" $ERROR_CONFIG
-source "$(dirname "$0")/../config/errors.conf" || error_exit "Failed to load error configuration" $ERROR_CONFIG
+# Determine paths
+if [[ "$(dirname "$0")" == "$PREFIX/bin" ]]; then
+    # Running from installed location
+    BASEDIR="$PREFIX/lib/patchouli"
+    CONFDIR="$PREFIX/etc/patchouli"
+else
+    # Running from source
+    BASEDIR="$(dirname "$0")/.."
+    CONFDIR="$BASEDIR/config"
+fi
 
-source "$(dirname "$0")/../lib/vcs/utils.sh"
-source "$(dirname "$0")/../lib/vcs/git.sh"
-source "$(dirname "$0")/../lib/vcs/hg.sh"
+source "$BASEDIR/lib/core/error_handling.sh"
+source "$BASEDIR/lib/core/helpers.sh"
+source "$BASEDIR/lib/core/logging.sh"
 
-source "$(dirname "$0")/../lib/commands/diff.sh"  
-source "$(dirname "$0")/../lib/commands/patch.sh"
+source "$CONFDIR/colors.conf" || error_exit "Failed to load color configuration" $ERROR_CONFIG
+source "$CONFDIR/defaults.conf" || error_exit "Failed to load default configuration" $ERROR_CONFIG
+source "$CONFDIR/errors.conf" || error_exit "Failed to load error configuration" $ERROR_CONFIG
 
-source "$(dirname "$0")/../lib/help/general.sh"
-source "$(dirname "$0")/../lib/help/diff.sh"
-source "$(dirname "$0")/../lib/help/patch.sh"
+source "$BASEDIR/lib/vcs/utils.sh"
+source "$BASEDIR/lib/vcs/git.sh"
+source "$BASEDIR/lib/vcs/hg.sh"
+
+source "$BASEDIR/lib/commands/diff.sh"  
+source "$BASEDIR/lib/commands/patch.sh"
+
+source "$BASEDIR/lib/help/general.sh"
+source "$BASEDIR/lib/help/diff.sh"
+source "$BASEDIR/lib/help/patch.sh"
 
 parse_main_args() {
     while [[ $# -gt 0 ]]; do
