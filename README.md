@@ -121,7 +121,7 @@ patchouli diff -- --unified=5  # Git/Mercurial specific options
 ## Issues
 If you find an issue, please let me know via:
 
-- [Sourcehut TODO](https://todo.sr.ht/~snoooooooope/Spaceman)
+- [Sourcehut TODO](https://todo.sr.ht/~snoooooooope/patchouli)
 - [GitHub Pull Request](https://github.com/snoooooooope/patchouli/pulls)
 
 ## Contributing

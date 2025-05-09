@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/logging.sh" || exit 1
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/error_handling.sh" || exit 1
 
 run_diff() {
     if ! command -v diff >/dev/null 2>&1; then
@@ -11,13 +12,14 @@ run_diff() {
     local original="" modified="" output_file="changes.patch"
     local num_changes="" since_ref=""
     local diff_options=() files_after_options=()
-    local vcs=$(get_vcs)
+    local vcs
+    vcs=$(get_vcs)
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -o|--output)
                 output_file="$2"
-                [[ -z "$output_file" ]] && error_exit "Output file not specified." $ERROR_INVALID_INPUT
+                [[ -z "$output_file" ]] && error_exit "Output file not specified." "$ERROR_INVALID_INPUT"
                 validate_dir "$(dirname "$output_file")"
                 shift 2
                 ;;
@@ -75,12 +77,12 @@ run_diff() {
         echo -e "${BLUE}Creating patch from '$original' to '$modified'...${RESET}"
         if ! diff "${diff_options[@]}" -u "$original" "$modified" > "$output_file" 2>&1; then
             local exit_code=$?
-            [[ $exit_code -eq 1 && -s "$output_file" ]] || error_exit "Diff failed (exit $exit_code)." $ERROR_GENERAL
+            [[ $exit_code -eq 1 && -s "$output_file" ]] || error_exit "Diff failed (exit $exit_code)." "$ERROR_GENERAL"
         fi
     elif [[ ${#files_after_options[@]} -eq 0 ]]; then
-        error_exit "No files specified and no VCS detected." $ERROR_INVALID_INPUT
+        error_exit "No files specified and no VCS detected." "$ERROR_INVALID_INPUT"
     else
-        error_exit "diff requires exactly two files." $ERROR_INVALID_INPUT
+        error_exit "diff requires exactly two files." "$ERROR_INVALID_INPUT"
     fi
 
     if [[ -s "$output_file" ]]; then
@@ -105,6 +107,10 @@ run_vcs_diff() {
             else
                 git_cmd=("git" "diff" "HEAD" "${vcs_options[@]}")
             fi
+            "${git_cmd[@]}" > "$output_file" 2>&1 || {
+                local exit_code=$?
+                [[ $exit_code -eq 1 ]] || error_exit "git command failed (exit $exit_code)."
+            }
             ;;
         hg)
             local hg_cmd=()
@@ -115,11 +121,10 @@ run_vcs_diff() {
             else
                 hg_cmd=("hg" "diff" "${vcs_options[@]}")
             fi
+            "${hg_cmd[@]}" > "$output_file" 2>&1 || {
+                local exit_code=$?
+                [[ $exit_code -eq 1 ]] || error_exit "hg command failed (exit $exit_code)."
+            }
             ;;
     esac
-
-    if ! "${vcs_cmd[@]}" > "$output_file" 2>&1; then
-        local exit_code=$?
-        [[ $exit_code -eq 1 ]] || error_exit "$vcs command failed (exit $exit_code)."
-    fi
 }

@@ -15,7 +15,8 @@ get_vcs() {
 }
 
 require_vcs() {
-    local vcs=$(get_vcs)
-    [[ "$vcs" != "none" ]] || error_exit "No supported VCS (Git/Mercurial) detected in this directory." $ERROR_VCS
+    local vcs
+    vcs=$(get_vcs)
+    [[ "$vcs" != "none" ]] || error_exit "No supported VCS (Git/Mercurial) detected in this directory." "$ERROR_VCS"
     echo "$vcs"
 } 

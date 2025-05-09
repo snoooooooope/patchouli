@@ -5,7 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../core/helpers.sh"
 validate_hg_status() {
     if hg status | grep -q .; then
         warning_msg "Mercurial working directory is not clean. Consider committing or stashing your changes before patching."
-        return $ERROR_VCS
+        return "$ERROR_VCS"
     fi
 }
 

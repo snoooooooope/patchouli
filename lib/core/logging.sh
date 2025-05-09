@@ -29,17 +29,18 @@ confirm() {
 }
 
 validate_file() {
-    [[ -f "$1" ]] || error_exit "File '$1' not found." $ERROR_INVALID_INPUT
-    [[ -r "$1" ]] || error_exit "File '$1' is not readable." $ERROR_INVALID_INPUT
+    [[ -f "$1" ]] || error_exit "File '$1' not found." "$ERROR_INVALID_INPUT"
+    [[ -r "$1" ]] || error_exit "File '$1' is not readable." "$ERROR_INVALID_INPUT"
 }
 
 validate_dir() {
-    [[ -d "$1" ]] || error_exit "Directory '$1' not found." $ERROR_INVALID_INPUT
-    [[ -x "$1" ]] || error_exit "Directory '$1' is not accessible." $ERROR_INVALID_INPUT
+    [[ -d "$1" ]] || error_exit "Directory '$1' not found." "$ERROR_INVALID_INPUT"
+    [[ -x "$1" ]] || error_exit "Directory '$1' is not accessible." "$ERROR_INVALID_INPUT"
 }
 
 validate_vcs_status() {
-    local vcs=$(get_vcs)
+    local vcs
+    vcs=$(get_vcs)
     case "$vcs" in
         git)
             validate_git_status

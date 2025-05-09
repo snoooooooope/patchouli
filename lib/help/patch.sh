@@ -22,7 +22,8 @@ show_patch_help() {
 }
 
 show_vcs_patch_help() {
-    local vcs=$(get_vcs)
+    local vcs
+    vcs=$(get_vcs)
     case "$vcs" in
         git) show_git_patch_help ;;
         hg)  show_hg_patch_help ;;

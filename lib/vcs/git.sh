@@ -5,7 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../core/helpers.sh"
 validate_git_status() {
     if ! git diff-index --quiet HEAD --; then
         warning_msg "Git working directory is not clean. Consider committing or stashing your changes before patching."
-        return $ERROR_VCS
+        return "$ERROR_VCS"
     fi
 }
 

@@ -25,7 +25,8 @@ show_diff_help() {
 }
 
 show_vcs_diff_help() {
-    local vcs=$(get_vcs)
+    local vcs
+    vcs=$(get_vcs)
     case "$vcs" in
         git) show_git_diff_help ;;
         hg)  show_hg_diff_help ;;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/logging.sh" || exit 1
-
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/error_handling.sh" || exit 1
 run_patch() {
     if ! command -v patch >/dev/null 2>&1; then
         echo "Error: Required 'patch' command not found. Please install patch." >&2
@@ -10,7 +10,8 @@ run_patch() {
 
     local patch_file="" interactive=false
     local patch_options=() files_after_options=()
-    local vcs=$(get_vcs)
+    local vcs
+    vcs=$(get_vcs)
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -56,7 +57,7 @@ run_patch() {
         esac
     done
 
-    [[ ${#files_after_options[@]} -gt 0 ]] || error_exit "Patch file not specified." $ERROR_INVALID_INPUT
+    [[ ${#files_after_options[@]} -gt 0 ]] || error_exit "Patch file not specified." "$ERROR_INVALID_INPUT"
     patch_file="${files_after_options[0]}"
     validate_file "$patch_file"
     [[ -s "$patch_file" ]] || { warning_msg "Empty patch file."; return; }
