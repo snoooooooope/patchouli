@@ -1,0 +1,63 @@
+name: Mirror Sourcehut Repo
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 5'
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache fast-export
+        uses: actions/cache@v4
+        with:
+          path: ~/fast-export
+          key: fast-export-${{ runner.os }}-v1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mercurial git python3
+          if [ ! -d ~/fast-export ]; then
+            git clone https://github.com/snoooooooope/fast-export.git ~/fast-export
+          fi
+
+      - name: Clone Mercurial repo
+        run: |
+          ENCODED_TOKEN=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['SH_TOKEN'].strip()))")
+          hg clone "https://x-token-auth:${ENCODED_TOKEN}@hg.sr.ht/~${{ secrets.SH_USERNAME }}/${{ secrets.SH_REPO }}" src-hg
+        env:
+          SH_TOKEN: ${{ secrets.SH_TOKEN }}
+          SH_USERNAME: ${{ secrets.SH_USERNAME }}
+          SH_REPO: ${{ secrets.SH_REPO }}
+
+      - name: Convert Mercurial to Git
+        run: |
+          git init src-git
+          cd src-git
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          ~/fast-export/hg-fast-export.sh -r ../src-hg
+          git checkout HEAD
+
+      - name: Copy files from src-git to root, preserve .github
+        run: |
+          rsync -a --exclude='.git' --exclude='.github' src-git/ ./ || [ $? -eq 24 ]
+          rm -rf src-git src-hg
+
+      - name: Commit and push changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          git status
+          git diff --cached --quiet || git commit -m "Mirror from Sourcehut (via GitHub Actions)"
+          git push origin HEAD
