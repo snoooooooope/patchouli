@@ -14,7 +14,7 @@ log_debug() {
 
 confirm() {
     while true; do
-        read -r -p "${BLUE}${1:-Are you sure? [y/N]} ${RESET}" response
+        read -r -p "$(echo -e "${BOLD}${1:-Are you sure? [y/N]:} ${RESET}")" response
         case "$response" in
             [yY]|[nN]) break ;;
             *) echo "Please enter 'y' or 'n'." ;;

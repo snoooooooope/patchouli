@@ -62,7 +62,7 @@ Run the following command to confirm `patchouli` is installed correctly:
 ```bash
 patchouli --version
 ```
-You should see the current version (`1.1.1` or later) printed to the terminal.
+You should see the current version (`1.1.2` or later) printed to the terminal.
 
 ## Usage
 
@@ -119,47 +119,4 @@ Contributions are welcome from everyone! Here's how you can help:
    hg clone https://hg.sr.ht/~snoooooooope/patchouli
    ```
 2. **Create a bookmark for your feature**:
-   ```bash
-   hg bookmark feature/your-feature
    ```
-3. **Commit your changes**:
-   ```bash
-   hg commit -m 'Add some feature'
-   ```
-4. **Push the bookmark to the remote repository**:
-   ```bash
-   hg push -B feature/your-feature
-   ```
-5. **Submit patches via email**:
-   - Use `hg email` to send patches to the project's [mailing list](https://lists.sr.ht/~snoooooooope/patchouli).
-   - Example:
-     ```bash
-     hg email --rev feature/your-feature --to ~snoooooooope/patchouli@lists.sr.ht
-     ```
-   - Include a clear subject prefix like `[PATCH lib/commands/diff.sh]`.
-
-### Git Workflow
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/snoooooooope/patchouli.git
-   ```
-2. **Create a feature branch**:
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-3. **Commit your changes**:
-   ```bash
-   git commit -am 'Add some feature'
-   ```
-4. **Push to the branch**:
-   ```bash
-   git push origin feature/your-feature
-   ```
-5. **Open a pull request on GitHub**:
-   - Navigate to the repository on GitHub.
-   - Click "Compare & pull request" for your pushed branch.
-   - Include a clear title and description of your changes.
-
-## License
-
-Patchouli is MIT licensed.

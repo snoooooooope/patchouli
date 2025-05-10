@@ -102,7 +102,11 @@ run_patch() {
             fi
             confirm "Apply Mercurial patch from '$patch_file'?" || exit 0
             if ! hg import --no-commit "${patch_options[@]}" "$patch_file" 2>&1; then
-                error_exit "Mercurial patch failed. Resolve conflicts manually or use '--force'." "$ERROR_VCS"
+                if [[ " ${patch_options[*]} " =~ " --force " || " ${patch_options[*]} " =~ " -f " ]]; then
+                    hg import --no-commit --force "$patch_file" || error_exit "Mercurial patch failed even with --force." "$ERROR_VCS"
+                else
+                    error_exit "Mercurial patch failed. Resolve conflicts manually or use '--force'." "$ERROR_VCS"
+                fi
             fi
             ;;
         *)

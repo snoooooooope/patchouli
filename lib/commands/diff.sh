@@ -6,7 +6,7 @@ run_diff() {
     fi
 
     local original="" modified="" output_file="$DEFAULT_PATCH_FILE"
-    local num_changes="" since_ref=""
+    local num_changes="" since_ref="" output_file_specified=false
     local diff_options=() files_after_options=()
     local vcs
     vcs=$(get_vcs)
@@ -15,6 +15,7 @@ run_diff() {
         case "$1" in
             -o|--output)
                 output_file="$2"
+                output_file_specified=true
                 [[ -z "$output_file" ]] && error_exit "Output file not specified." "$ERROR_INVALID_INPUT"
                 validate_dir "$(dirname "$output_file")"
                 shift 2
@@ -106,6 +107,26 @@ run_diff() {
                 fi
                 ;;
         esac
+        return
+    fi
+
+    if [[ "$vcs" == "hg" && ${#files_after_options[@]} -eq 0 ]]; then
+        echo -e "${BLUE}Mercurial diff for all uncommitted changes:${RESET}"
+        if [[ "$output_file_specified" == "false" ]]; then
+            hg diff
+            exit 0
+        else
+            if hg diff | tee "$output_file"; then
+                if [[ -s "$output_file" ]]; then
+                    echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+                else
+                    echo -e "${YELLOW}No differences found.${RESET}"
+                fi
+            else
+                local exit_code=$?
+                [[ $exit_code -eq 1 ]] || error_exit "hg command failed (exit $exit_code)." "$ERROR_VCS"
+            fi
+        fi
         return
     fi
 
