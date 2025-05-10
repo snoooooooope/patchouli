@@ -1,17 +1,30 @@
 #!/usr/bin/env bash
 
-source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/logging.sh" || exit 1
-source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/error_handling.sh" || exit 1
 run_patch() {
     if ! command -v patch >/dev/null 2>&1; then
-        echo "Error: Required 'patch' command not found. Please install patch." >&2
-        exit 1
+        error_exit "Required 'patch' command not found. Please install patch." "$ERROR_MISSING_DEP"
     fi
 
-    local patch_file="" interactive=false
+    local patch_file="$DEFAULT_PATCH_FILE" interactive=false
     local patch_options=() files_after_options=()
     local vcs
     vcs=$(get_vcs)
+
+    # Set default patch file if not specified
+    if [[ ${#files_after_options[@]} -eq 0 && -f "$DEFAULT_PATCH_FILE" ]]; then
+        case "$vcs" in
+            git) 
+                if [[ -f "$DEFAULT_GIT_PATCH_FILE" ]]; then
+                    patch_file="$DEFAULT_GIT_PATCH_FILE"
+                fi
+                ;;
+            hg)
+                if [[ -f "$DEFAULT_HG_PATCH_FILE" ]]; then
+                    patch_file="$DEFAULT_HG_PATCH_FILE"
+                fi
+                ;;
+        esac
+    fi
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -71,12 +84,14 @@ run_patch() {
         git)
             if $interactive; then
                 confirm "Apply Git patch from '$patch_file' interactively?" || exit 0
-                git apply --reject "${patch_options[@]}" "$patch_file"
+                git apply --reject "${patch_options[@]}" "$patch_file" || {
+                    error_exit "Git patch failed. Resolve conflicts manually or use '--reject'." "$ERROR_VCS"
+                }
             else
                 confirm "Apply Git patch from '$patch_file'?" || exit 0
                 if ! git apply "${patch_options[@]}" "$patch_file" 2>&1; then
                     if ! git am "${patch_options[@]}" "$patch_file" 2>&1; then
-                        error_exit "Git patch failed. Resolve conflicts manually or use '--reject'."
+                        error_exit "Git patch failed. Resolve conflicts manually or use '--reject'." "$ERROR_VCS"
                     fi
                 fi
             fi
@@ -87,17 +102,19 @@ run_patch() {
             fi
             confirm "Apply Mercurial patch from '$patch_file'?" || exit 0
             if ! hg import --no-commit "${patch_options[@]}" "$patch_file" 2>&1; then
-                error_exit "Mercurial patch failed. Resolve conflicts manually or use '--force'."
+                error_exit "Mercurial patch failed. Resolve conflicts manually or use '--force'." "$ERROR_VCS"
             fi
             ;;
         *)
             if $interactive; then
                 echo -e "${YELLOW}Interactive mode enabled. Follow prompts.${RESET}"
-                patch -i "${patch_options[@]}" < "$patch_file"
+                patch -i "${patch_options[@]}" < "$patch_file" || {
+                    error_exit "Patch failed. Resolve conflicts manually." "$ERROR_GENERAL"
+                }
             else
                 confirm "Apply standard patch from '$patch_file'?" || exit 0
                 if ! patch "${patch_options[@]}" < "$patch_file" 2>&1; then
-                    error_exit "Patch failed. Resolve conflicts manually."
+                    error_exit "Patch failed. Resolve conflicts manually." "$ERROR_GENERAL"
                 fi
             fi
             ;;

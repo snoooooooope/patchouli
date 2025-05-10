@@ -58,7 +58,7 @@ Run the following command to confirm `patchouli` is installed correctly:
 ```bash
 patchouli --version
 ```
-You should see the current version (`1.0.0` or later) printed to the terminal.
+You should see the current version (`1.1.1` or later) printed to the terminal.
 
 ## Usage
 

@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
-# This script is the main entry point for the Patchouli tool.
-# It parses command-line arguments, loads configuration files, and routes commands to the appropriate functions.
+
+# TODO: Make this not a hacky mess
 
 # TODO: Add support for more VCS systems (bzr, svn, etc.)
 # TODO: Add support for more configuration options (e.g. --no-color, --no-diff-header, --no-patch-header, etc.)
 
 set -euo pipefail
 
-# set default PREFIX if not set , then determine if the script was installed globally or locally
 : "${PREFIX:=/usr/local}"
 
 if [[ "$(dirname "$0")" == "$PREFIX/bin" ]]; then
@@ -19,13 +18,13 @@ else
     CONFDIR="$BASEDIR/config"
 fi
 
-source "$BASEDIR/lib/core/error_handling.sh"
-source "$BASEDIR/lib/core/helpers.sh"
-source "$BASEDIR/lib/core/logging.sh"
-
 source "$CONFDIR/colors.conf" || error_exit "Failed to load color configuration" "$ERROR_CONFIG"
 source "$CONFDIR/defaults.conf" || error_exit "Failed to load default configuration" "$ERROR_CONFIG"
 source "$CONFDIR/errors.conf" || error_exit "Failed to load error configuration" "$ERROR_CONFIG"
+
+source "$BASEDIR/lib/core/error_handling.sh"
+source "$BASEDIR/lib/core/helpers.sh"
+source "$BASEDIR/lib/core/logging.sh"
 
 source "$BASEDIR/lib/vcs/utils.sh"
 source "$BASEDIR/lib/vcs/git.sh"
@@ -43,20 +42,19 @@ parse_main_args() {
         case "$1" in
             -h|--help|help) show_help; exit 0 ;;
             --version) show_version ;;
-            --) shift; COMMAND="$1"; shift; break ;;
+            --) shift; COMMAND="$1"; shift; ARGS=("$@"); break ;;
             -*) error_exit "Unknown global option: $1" ;;
-            *) COMMAND="$1"; shift; break ;;
+            *) COMMAND="$1"; shift; ARGS=("$@"); break ;;
         esac
-        shift
     done
 }
 
 route_command() {
     case "$COMMAND" in
-        diff)       run_diff "$@" ;;
-        patch)      run_patch "$@" ;;
-        help)       show_help "${1:-}" ;;
-        *)          error_exit "Unknown command: $COMMAND. Use '$0 help' for usage." ;;
+        diff) run_diff "${ARGS[@]}" ;;
+        patch) run_patch "${ARGS[@]}" ;;
+        help) show_help "${ARGS[0]:-}" ;;
+        *) error_exit "Unknown command: $COMMAND. Use '$0 help' for usage." ;;
     esac
 }
 

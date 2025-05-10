@@ -4,14 +4,6 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-confirm() {
-    read -r -p "${BLUE}${1:-Are you sure? [y/N]} ${RESET}" response
-    case "$response" in
-        [yY][eE][sS]|[yY]) true ;;
-        *) false ;;
-    esac
-}
-
 get_vcs() {
     if command_exists git && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         echo "git"

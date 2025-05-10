@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-CONFIG_DIR="$(dirname "${BASH_SOURCE[0]}")/../../config"
-
 warning_msg() {
     echo -e "${YELLOW}Warning: $*${RESET}"
 }

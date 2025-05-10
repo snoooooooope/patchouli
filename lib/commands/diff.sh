@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 
-source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/logging.sh" || exit 1
-source "$(dirname "${BASH_SOURCE[0]}")/../../lib/core/error_handling.sh" || exit 1
-
 run_diff() {
     if ! command -v diff >/dev/null 2>&1; then
-        echo "Error: Required 'diff' command not found. Please install diffutils." >&2
-        exit 1
+        error_exit "Required 'diff' command not found. Please install diffutils." "$ERROR_MISSING_DEP"
     fi
 
-    local original="" modified="" output_file="changes.patch"
+    local original="" modified="" output_file="$DEFAULT_PATCH_FILE"
     local num_changes="" since_ref=""
     local diff_options=() files_after_options=()
     local vcs
@@ -37,7 +33,7 @@ run_diff() {
                 ;;
             --)
                 shift
-                files_after_options=("$@")
+                files_after_options+=("$@")
                 break
                 ;;
             -*)
@@ -47,9 +43,21 @@ run_diff() {
             *)
                 files_after_options+=("$1")
                 shift
+                while [[ $# -gt 0 && "$1" != -* ]]; do
+                    files_after_options+=("$1")
+                    shift
+                done
                 ;;
         esac
     done
+
+    # Set default output file if not specified
+    if [[ -z "$output_file" || "$output_file" == "$DEFAULT_PATCH_FILE" ]]; then
+        case "$vcs" in
+            git) output_file="$DEFAULT_GIT_PATCH_FILE" ;;
+            hg) output_file="$DEFAULT_HG_PATCH_FILE" ;;
+        esac
+    fi
 
     if [[ -n "$num_changes" || -n "$since_ref" ]]; then
         case "$vcs" in
@@ -68,6 +76,39 @@ run_diff() {
         return
     fi
 
+    if [[ "$vcs" != "none" && ${#files_after_options[@]} -eq 1 ]]; then
+        # VCS mode with single file - diff against repository version
+        case "$vcs" in
+            git)
+                echo -e "${BLUE}Git diff for '${files_after_options[0]}':${RESET}"
+                if git diff HEAD -- "${files_after_options[0]}" | tee "$output_file"; then
+                    if [[ -s "$output_file" ]]; then
+                        echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+                    else
+                        echo -e "${YELLOW}No differences found.${RESET}"
+                    fi
+                else
+                    local exit_code=$?
+                    [[ $exit_code -eq 1 ]] || error_exit "git command failed (exit $exit_code)." "$ERROR_VCS"
+                fi
+                ;;
+            hg)
+                echo -e "${BLUE}Mercurial diff for '${files_after_options[0]}':${RESET}"
+                if hg diff "${files_after_options[0]}" | tee "$output_file"; then
+                    if [[ -s "$output_file" ]]; then
+                        echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+                    else
+                        echo -e "${YELLOW}No differences found.${RESET}"
+                    fi
+                else
+                    local exit_code=$?
+                    [[ $exit_code -eq 1 ]] || error_exit "hg command failed (exit $exit_code)." "$ERROR_VCS"
+                fi
+                ;;
+        esac
+        return
+    fi
+
     if [[ ${#files_after_options[@]} -eq 2 ]]; then
         original="${files_after_options[0]}"
         modified="${files_after_options[1]}"
@@ -75,20 +116,30 @@ run_diff() {
         validate_file "$modified"
 
         echo -e "${BLUE}Creating patch from '$original' to '$modified'...${RESET}"
-        if ! diff "${diff_options[@]}" -u "$original" "$modified" > "$output_file" 2>&1; then
+        if diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"; then
+            if [[ -s "$output_file" ]]; then
+                echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+            else
+                echo -e "${YELLOW}Files are identical - no differences found.${RESET}"
+            fi
+        else
             local exit_code=$?
-            [[ $exit_code -eq 1 && -s "$output_file" ]] || error_exit "Diff failed (exit $exit_code)." "$ERROR_GENERAL"
+            case $exit_code in
+                1)
+                    if [[ -s "$output_file" ]]; then
+                        echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+                    else
+                        error_exit "Diff found but patch file is empty." "$ERROR_GENERAL"
+                    fi
+                    ;;
+                2) error_exit "One or both input files do not exist." "$ERROR_INVALID_INPUT" ;;
+                *) error_exit "command failed with exit code $exit_code." "$ERROR_GENERAL" ;;
+            esac
         fi
     elif [[ ${#files_after_options[@]} -eq 0 ]]; then
-        error_exit "No files specified and no VCS detected." "$ERROR_INVALID_INPUT"
+        error_exit "No files specified for diff operation." "$ERROR_INVALID_INPUT"
     else
-        error_exit "diff requires exactly two files." "$ERROR_INVALID_INPUT"
-    fi
-
-    if [[ -s "$output_file" ]]; then
-        echo -e "${GREEN}Patch created: $output_file${RESET}"
-    else
-        warning_msg "Empty patch file (no differences found)."
+        error_exit "Diff operation requires exactly two files (got ${#files_after_options[@]})." "$ERROR_INVALID_INPUT"
     fi
 }
 
@@ -99,32 +150,33 @@ run_vcs_diff() {
 
     case "$vcs" in
         git)
-            local git_cmd=()
-            if [[ -n "$since_ref" ]]; then
-                git_cmd=("git" "diff" "$since_ref" "--" "${vcs_options[@]}")
-            elif [[ -n "$num_changes" ]]; then
-                git_cmd=("git" "format-patch" "-${num_changes}" "--stdout" "${vcs_options[@]}")
-            else
-                git_cmd=("git" "diff" "HEAD" "${vcs_options[@]}")
+            if ! git diff "${vcs_options[@]}" | tee "$output_file"; then
+                error_exit "Git diff operation failed" "$ERROR_VCS"
             fi
-            "${git_cmd[@]}" > "$output_file" 2>&1 || {
-                local exit_code=$?
-                [[ $exit_code -eq 1 ]] || error_exit "git command failed (exit $exit_code)."
-            }
+            if [[ -s "$output_file" ]]; then
+                echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+            else
+                echo -e "${YELLOW}No differences found.${RESET}"
+            fi
             ;;
         hg)
-            local hg_cmd=()
-            if [[ -n "$since_ref" ]]; then
-                hg_cmd=("hg" "diff" "-r" "$since_ref" "--" "${vcs_options[@]}")
-            elif [[ -n "$num_changes" ]]; then
-                hg_cmd=("hg" "diff" "-r" "tip~${num_changes}:tip" "--" "${vcs_options[@]}")
-            else
-                hg_cmd=("hg" "diff" "${vcs_options[@]}")
+            if ! hg diff "${vcs_options[@]}" | tee "$output_file"; then
+                error_exit "Mercurial diff operation failed" "$ERROR_VCS"
             fi
-            "${hg_cmd[@]}" > "$output_file" 2>&1 || {
-                local exit_code=$?
-                [[ $exit_code -eq 1 ]] || error_exit "hg command failed (exit $exit_code)."
-            }
+            if [[ -s "$output_file" ]]; then
+                echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+            else
+                echo -e "${YELLOW}No differences found.${RESET}"
+            fi
             ;;
     esac
+}
+
+validate_file() {
+    if [[ ! -f "$1" ]]; then
+        error_exit "File '$1' does not exist" "$ERROR_INVALID_INPUT"
+    fi
+    if [[ ! -r "$1" ]]; then
+        error_exit "Cannot read file '$1'" "$ERROR_PERMISSION"
+    fi
 }
