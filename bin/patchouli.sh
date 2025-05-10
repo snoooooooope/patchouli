@@ -18,15 +18,11 @@ else
     CONFDIR="$BASEDIR/config"
 fi
 
-source "$CONFDIR/colors.conf" || error_exit "Failed to load color configuration" "$ERROR_CONFIG"
 source "$CONFDIR/defaults.conf" || error_exit "Failed to load default configuration" "$ERROR_CONFIG"
-source "$CONFDIR/errors.conf" || error_exit "Failed to load error configuration" "$ERROR_CONFIG"
 
 source "$BASEDIR/lib/core/error_handling.sh"
-source "$BASEDIR/lib/core/helpers.sh"
 source "$BASEDIR/lib/core/logging.sh"
 
-source "$BASEDIR/lib/vcs/utils.sh"
 source "$BASEDIR/lib/vcs/git.sh"
 source "$BASEDIR/lib/vcs/hg.sh"
 
