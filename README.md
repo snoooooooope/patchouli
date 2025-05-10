@@ -5,12 +5,10 @@
 
 A universal diff and patch tool that works across different version control systems with consistent output formatting and automatic VCS detection.
 
-## Features
-
-- **Streamlined Interface**: Single command for both standard and VCS-based operations.
-- **VCS Support**: Git and Mercurial integration with automatic detection .
-- **Interactive Mode**: Flag to confirm actions before execution.
-- **Modular Design**: The modular design makes it easy to add support for any VCS with minimal shell script knowledge.
+## Why Patchouli?
+- **Consistent Output**: Uniform patch formatting across Git, Mercurial, and plain files.
+- **VCS Agnostic**: Automatically detects your VCS or falls back to standard mode.
+- **User-Friendly**: Simplified commands for common workflows.
 
 ## Installation
 
@@ -40,9 +38,15 @@ For manual installation, follow these steps to ensure the script is accessible s
    git clone https://github.com/snoooooooope/patchouli.git ~/scripts/patchouli
    ```
 
-4. **Make the script executable**:
+3. **Make the script executable**:
    ```bash
-   chmod +x /usr/local/bin/patchouli
+   chmod +x ~/scripts/patchouli/bin/patchouli.sh
+   ```
+
+4. **Add to PATH**:
+   ```bash
+   echo 'export PATH="$HOME/scripts/patchouli/bin:$PATH"' >> ~/.bashrc
+   source ~/.bashrc
    ```
 
 ### Dependencies
@@ -68,15 +72,14 @@ You should see the current version (`1.1.1` or later) printed to the terminal.
 patchouli help
 
 # Show command-specific help
-patchouli help diff
-patchouli help patch
+patchouli diff help
+patchouli patch help
 
 # Show version
 patchouli --version
 
 # Diff two files (standard diff)
 patchouli diff old_file new_file -o output.patch
-patchouli diff file1 file2 -- -u  # Pass through standard diff options
 
 # Apply a patch (standard patch)
 patchouli patch changes.patch
@@ -86,7 +89,7 @@ patchouli patch changes.patch -i  # Interactive mode
 ### VCS Integration
 ```bash
 # Create VCS diff (auto-detects Git/Mercurial)
-patchouli diff -o changes.patch          # Current changes
+patchouli diff <file> -o changes.patch          # Current changes
 patchouli diff -n 3 -o changes.patch     # Last 3 commits/changesets
 patchouli diff -s HEAD~2 -o changes.patch # Since specific reference
 
@@ -97,32 +100,14 @@ patchouli patch changes.patch -3         # 3-way merge (Git only)
 patchouli patch changes.patch -f         # Force apply (Mercurial only)
 ```
 
-### Advanced Options
-```bash
-# Custom output file
-patchouli diff -o custom.patch
-patchouli diff --output custom.patch
+## Troubleshooting
+- **Error: "Patch failed"**: Ensure the patch file matches the target files. Use `-i` for interactive conflict resolution.
+- **Permission issues**: Use `sudo` for global installation or ensure your `~/scripts` directory is in `PATH`.
 
-# Number of changes (VCS)
-patchouli diff --num 5 -o changes.patch
+## Community
+- Report issues: [Sourcehut TODO](https://todo.sr.ht/~snoooooooope/patchouli) | [GitHub Issues](https://github.com/snoooooooope/patchouli/issues)
+- Contribute: See [Contributing](#contributing) below.
 
-# Since specific reference (commit/rev)
-patchouli diff --since v1.0 -o changes.patch
-
-# Pass through native VCS options
-patchouli diff -- --unified=5  # Git/Mercurial specific options
-```
-
-### Configuration
-```bash
-# Customize colors (edit config/colors.conf)
-# Set default options (edit config/defaults.conf)
-```
-## Issues
-If you find an issue, please let me know via:
-
-- [Sourcehut TODO](https://todo.sr.ht/~snoooooooope/patchouli)
-- [GitHub Pull Request](https://github.com/snoooooooope/patchouli/pulls)
 
 ## Contributing
 
