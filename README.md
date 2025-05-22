@@ -104,5 +104,6 @@ Contributions are welcome from everyone! Here's how you can help:
    - Navigate to the repository on GitHub.
    - Click "Compare & pull request" for your pushed branch.
    - Include a clear title and description of your changes.
+
 ## License
 Patchouli is MIT licensed.
