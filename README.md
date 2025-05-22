@@ -1,6 +1,7 @@
 # Patchouli
 [![License](https://img.shields.io/badge/LICENSE-MIT-8A2BE2?style=for-the-badge&logo=open-source-initiative&logoColor=8A2BE2&labelColor=000000&color=8A2BE2&border=1px_solid_#333333)](https://opensource.org/licenses/MIT)
 [![Shell](https://img.shields.io/badge/SHELL-POSIX-89E051?style=for-the-badge&logo=terminal&logoColor=89E051&labelColor=000000&color=89E051&border=1px_solid_#333333)](https://pubs.opengroup.org/onlinepubs/9699919799/utilitiesZ2.html)
+
 A universal diff and patch tool that works across different version control systems with consistent output formatting and automatic VCS detection.
 ## Why Patchouli?
 - **Consistent Output**: Uniform patch formatting across Git, Mercurial, and plain files.
