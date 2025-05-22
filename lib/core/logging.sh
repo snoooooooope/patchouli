@@ -13,14 +13,12 @@ log_debug() {
 }
 
 confirm() {
-    local prompt_text_styled="${BOLD}${1:-Are you sure? [y/N]:} ${RESET}"
     local prompt_text_plain="${1:-Are you sure?}"
     if command_exists gum; then
-        # Use gum for a more interactive confirmation
-        gum confirm "$prompt_text_plain"
-        return $? # Return the exit code from gum confirm
+        gum confirm --default=false --affirmative="Yes" --negative="No" "$prompt_text_plain"
+        return $?
     else
-        # Fallback to standard read if gum is not installed
+        local prompt_text_styled="${BOLD}${1:-Are you sure? [y/N]:} ${RESET}"
         while true; do
             read -r -p "$(echo -e "$prompt_text_styled")" response
             case "$response" in

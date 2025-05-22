@@ -60,6 +60,26 @@ run_diff() {
         esac
     fi
 
+    # If no diff options were provided and gum is available, let the user select interactively
+    if [[ ${#diff_options[@]} -eq 0 ]] && command_exists gum; then
+        log_info "No diff options specified. Choose options interactively:"
+        local selected_options
+        selected_options=$(gum choose --limit 0 "Unified Format" "Ignore Case" "Ignore All Space" "Ignore Space Change" "Ignore Blank Lines")
+        diff_options=()
+        for option in $selected_options; do
+            case "$option" in
+                "Unified Format") diff_options+=("-u") ;;
+                "Ignore Case") diff_options+=("-i") ;;
+                "Ignore All Space") diff_options+=("-w") ;;
+                "Ignore Space Change") diff_options+=("-b") ;;
+                "Ignore Blank Lines") diff_options+=("-B") ;;
+            esac
+        done
+        if [[ ${#diff_options[@]} -gt 0 ]]; then
+             log_info "Selected options: ${diff_options[*]}"
+        fi
+    fi
+
     if [[ -n "$num_changes" || -n "$since_ref" ]]; then
         case "$vcs" in
             git)
@@ -137,25 +157,16 @@ run_diff() {
         validate_file "$modified"
 
         echo -e "${BLUE}Creating patch from '$original' to '$modified'...${RESET}"
-        if diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"; then
-            if [[ -s "$output_file" ]]; then
-                echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
-            else
-                echo -e "${YELLOW}Files are identical - no differences found.${RESET}"
-            fi
+        if command_exists gum; then
+            gum spin --spinner dot --title "Generating diff..." -- diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"
         else
-            local exit_code=$?
-            case $exit_code in
-                1)
-                    if [[ -s "$output_file" ]]; then
-                        echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
-                    else
-                        error_exit "Diff found but patch file is empty." "$ERROR_GENERAL"
-                    fi
-                    ;;
-                2) error_exit "One or both input files do not exist." "$ERROR_INVALID_INPUT" ;;
-                *) error_exit "command failed with exit code $exit_code." "$ERROR_GENERAL" ;;
-            esac
+            diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"
+        fi
+
+        if [[ -s "$output_file" ]]; then
+            echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+        else
+            echo -e "${YELLOW}Files are identical - no differences found.${RESET}"
         fi
     elif [[ ${#files_after_options[@]} -eq 0 ]]; then
         if command_exists gum; then
@@ -166,6 +177,7 @@ run_diff() {
             if [[ -z "$selected_original" ]]; then
                 error_exit "No original file selected." "$ERROR_INVALID_INPUT"
             fi
+            log_info "Original file selected: $selected_original"
 
             local selected_modified
             selected_modified=$(gum file)
@@ -180,25 +192,16 @@ run_diff() {
             validate_file "$modified"
 
             echo -e "${BLUE}Creating patch from '$original' to '$modified'...${RESET}"
-            if diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"; then
-                if [[ -s "$output_file" ]]; then
-                    echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
-                else
-                    echo -e "${YELLOW}Files are identical - no differences found.${RESET}"
-                fi
+            if command_exists gum; then
+                gum spin --spinner dot --title "Generating diff..." -- diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"
             else
-                local exit_code=$?
-                case $exit_code in
-                    1)
-                        if [[ -s "$output_file" ]]; then
-                            echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
-                        else
-                            error_exit "Diff found but patch file is empty." "$ERROR_GENERAL"
-                        fi
-                        ;;
-                    2) error_exit "One or both input files do not exist." "$ERROR_INVALID_INPUT" ;;
-                    *) error_exit "command failed with exit code $exit_code." "$ERROR_GENERAL" ;;
-                esac
+                diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"
+            fi
+
+            if [[ -s "$output_file" ]]; then
+                echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+            else
+                echo -e "${YELLOW}Files are identical - no differences found.${RESET}"
             fi
         else
             error_exit "No files specified for diff operation." "$ERROR_INVALID_INPUT"
@@ -211,28 +214,64 @@ run_diff() {
 run_vcs_diff() {
     local vcs="$1" num_changes="$2" since_ref="$3" output_file="$4"
     shift 4
-    local vcs_options=("$@")
+    local vcs_options=()
 
+    # Reconstruct vcs_options, excluding --num and --since
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -n|--num)
+                shift 2
+                ;;
+            -s|--since)
+                shift 2
+                ;;
+            *)
+                vcs_options+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    local diff_output
     case "$vcs" in
         git)
-            if ! git diff "${vcs_options[@]}" | tee "$output_file"; then
-                error_exit "Git diff operation failed" "$ERROR_VCS"
-            fi
-            if [[ -s "$output_file" ]]; then
-                echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+            if command_exists gum; then
+                 diff_output=$(gum spin --spinner dot --title "Generating Git diff..." -- git diff "${vcs_options[@]}" 2>&1)
             else
-                echo -e "${YELLOW}No differences found.${RESET}"
+                 diff_output=$(git diff "${vcs_options[@]}" 2>&1)
             fi
+            if [[ -z "$diff_output" ]]; then
+                echo -e "${YELLOW}No differences found.${RESET}"
+            else
+                echo "$diff_output" | tee "$output_file"
+                if [[ -t 1 ]] && command_exists gum; then
+                     echo "$diff_output" | gum pager
+                fi
+            fi
+
+             if [[ -s "$output_file" ]]; then
+                 echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+             fi
             ;;
         hg)
-            if ! hg diff "${vcs_options[@]}" | tee "$output_file"; then
-                error_exit "Mercurial diff operation failed" "$ERROR_VCS"
-            fi
-            if [[ -s "$output_file" ]]; then
-                echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+             if command_exists gum; then
+                 diff_output=$(gum spin --spinner dot --title "Generating Mercurial diff..." -- hg diff "${vcs_options[@]}" 2>&1)
             else
-                echo -e "${YELLOW}No differences found.${RESET}"
+                 diff_output=$(hg diff "${vcs_options[@]}" 2>&1)
             fi
+
+            if [[ -z "$diff_output" ]]; then
+                 echo -e "${YELLOW}No differences found.${RESET}"
+             else
+                 echo "$diff_output" | tee "$output_file"
+                 if [[ -t 1 ]] && command_exists gum; then
+                      echo "$diff_output" | gum pager
+                 fi
+             fi
+
+             if [[ -s "$output_file" ]]; then
+                 echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+             fi
             ;;
     esac
 }

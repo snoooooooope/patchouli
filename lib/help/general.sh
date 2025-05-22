@@ -26,11 +26,18 @@ show_general_help() {
 }
 
 show_help() {
+    local help_output=""
     case "${1:-}" in
-        diff) show_diff_help ;;
-        patch) show_patch_help ;;
-        *) show_general_help ;;
+        diff) help_output=$(show_diff_help) ;;
+        patch) help_output=$(show_patch_help) ;;
+        *) help_output=$(show_general_help) ;;
     esac
+
+    if [[ -t 1 ]] && command_exists gum; then
+        echo -e "$help_output" | gum pager
+    else
+        echo -e "$help_output"
+    fi
 }
 
 show_version() {

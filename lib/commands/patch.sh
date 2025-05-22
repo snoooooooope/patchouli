@@ -98,14 +98,26 @@ run_patch() {
         git)
             if $interactive; then
                 confirm "Apply Git patch from '$patch_file' interactively?" || exit 0
-                git apply --reject "${patch_options[@]}" "$patch_file" || {
+                if command_exists gum; then
+                    gum spin --spinner dot --title "Applying Git patch (interactive)..." -- git apply --reject "${patch_options[@]}" "$patch_file"
+                else
+                    git apply --reject "${patch_options[@]}" "$patch_file"
+                fi || {
                     error_exit "Git patch failed. Resolve conflicts manually or use '--reject'." "$ERROR_VCS"
                 }
             else
                 confirm "Apply Git patch from '$patch_file'?" || exit 0
-                if ! git apply "${patch_options[@]}" "$patch_file" 2>&1; then
-                    if ! git am "${patch_options[@]}" "$patch_file" 2>&1; then
-                        error_exit "Git patch failed. Resolve conflicts manually or use '--reject'." "$ERROR_VCS"
+                if command_exists gum; then
+                    if ! gum spin --spinner dot --title "Applying Git patch..." -- git apply "${patch_options[@]}" "$patch_file" 2>&1; then
+                        if ! gum spin --spinner dot --title "Applying Git patch (am)..." -- git am "${patch_options[@]}" "$patch_file" 2>&1; then
+                            error_exit "Git patch failed. Resolve conflicts manually or use '--reject'." "$ERROR_VCS"
+                        fi
+                    fi
+                else
+                    if ! git apply "${patch_options[@]}" "$patch_file" 2>&1; then
+                        if ! git am "${patch_options[@]}" "$patch_file" 2>&1; then
+                            error_exit "Git patch failed. Resolve conflicts manually or use '--reject'." "$ERROR_VCS"
+                        fi
                     fi
                 fi
             fi
@@ -115,24 +127,44 @@ run_patch() {
                 warning_msg "Interactive mode not supported for Mercurial. Applying normally."
             fi
             confirm "Apply Mercurial patch from '$patch_file'?" || exit 0
-            if ! hg import --no-commit "${patch_options[@]}" "$patch_file" 2>&1; then
-                if [[ " ${patch_options[*]} " =~ " --force " || " ${patch_options[*]} " =~ " -f " ]]; then
-                    hg import --no-commit --force "$patch_file" || error_exit "Mercurial patch failed even with --force." "$ERROR_VCS"
-                else
-                    error_exit "Mercurial patch failed. Resolve conflicts manually or use '--force'." "$ERROR_VCS"
+            if command_exists gum; then
+                if ! gum spin --spinner dot --title "Applying Mercurial patch..." -- hg import --no-commit "${patch_options[@]}" "$patch_file" 2>&1; then
+                    if [[ " ${patch_options[*]} " =~ " --force " || " ${patch_options[*]} " =~ " -f " ]]; then
+                        gum spin --spinner dot --title "Applying Mercurial patch (forced)..." -- hg import --no-commit --force "$patch_file" || error_exit "Mercurial patch failed even with --force." "$ERROR_VCS"
+                    else
+                        error_exit "Mercurial patch failed. Resolve conflicts manually or use '--force'." "$ERROR_VCS"
+                    fi
+                fi
+            else
+                if ! hg import --no-commit "${patch_options[@]}" "$patch_file" 2>&1; then
+                    if [[ " ${patch_options[*]} " =~ " --force " || " ${patch_options[*]} " =~ " -f " ]]; then
+                        hg import --no-commit --force "$patch_file" || error_exit "Mercurial patch failed even with --force." "$ERROR_VCS"
+                    else
+                        error_exit "Mercurial patch failed. Resolve conflicts manually or use '--force'." "$ERROR_VCS"
+                    fi
                 fi
             fi
             ;;
         *)
             if $interactive; then
                 echo -e "${YELLOW}Interactive mode enabled. Follow prompts.${RESET}"
-                patch -i "${patch_options[@]}" < "$patch_file" || {
+                if command_exists gum; then
+                    gum spin --spinner dot --title "Applying standard patch (interactive)..." -- patch -i "${patch_options[@]}" < "$patch_file"
+                else
+                    patch -i "${patch_options[@]}" < "$patch_file"
+                fi || {
                     error_exit "Patch failed. Resolve conflicts manually." "$ERROR_GENERAL"
                 }
             else
                 confirm "Apply standard patch from '$patch_file'?" || exit 0
-                if ! patch "${patch_options[@]}" < "$patch_file" 2>&1; then
-                    error_exit "Patch failed. Resolve conflicts manually." "$ERROR_GENERAL"
+                if command_exists gum; then
+                    if ! gum spin --spinner dot --title "Applying standard patch..." -- patch "${patch_options[@]}" < "$patch_file" 2>&1; then
+                        error_exit "Patch failed. Resolve conflicts manually." "$ERROR_GENERAL"
+                    fi
+                else
+                    if ! patch "${patch_options[@]}" < "$patch_file" 2>&1; then
+                        error_exit "Patch failed. Resolve conflicts manually." "$ERROR_GENERAL"
+                    fi
                 fi
             fi
             ;;

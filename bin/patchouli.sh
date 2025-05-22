@@ -57,7 +57,18 @@ route_command() {
 main() {
     local COMMAND=""
     parse_main_args "$@"
-    [[ -z "$COMMAND" ]] && show_help
+    if [[ -z "$COMMAND" ]]; then
+        if command_exists gum; then
+            log_info "No command specified. Please choose a command:"
+            COMMAND=$(gum choose "diff" "patch" "help")
+            if [[ -z "$COMMAND" ]]; then
+                error_exit "No command selected." "$ERROR_INVALID_INPUT"
+            fi
+        else
+            show_help
+            exit 0 # Exit after showing help if gum is not available
+        fi
+    fi
     route_command "$@"
 }
 
