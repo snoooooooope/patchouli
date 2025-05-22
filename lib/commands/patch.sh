@@ -70,8 +70,22 @@ run_patch() {
         esac
     done
 
-    [[ ${#files_after_options[@]} -gt 0 ]] || error_exit "Patch file not specified." "$ERROR_INVALID_INPUT"
-    patch_file="${files_after_options[0]}"
+    if [[ ${#files_after_options[@]} -eq 0 ]]; then
+        if command_exists gum; then
+            log_info "No patch file specified. Using gum to select the patch file interactively."
+            local selected_patch_file
+            selected_patch_file=$(gum file)
+            if [[ -z "$selected_patch_file" ]]; then
+                error_exit "No patch file selected." "$ERROR_INVALID_INPUT"
+            fi
+            patch_file="$selected_patch_file"
+        else
+            error_exit "Patch file not specified." "$ERROR_INVALID_INPUT"
+        fi
+    else
+        patch_file="${files_after_options[0]}"
+    fi
+
     validate_file "$patch_file"
     [[ -s "$patch_file" ]] || { warning_msg "Empty patch file."; return; }
 

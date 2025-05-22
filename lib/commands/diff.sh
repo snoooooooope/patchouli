@@ -158,7 +158,51 @@ run_diff() {
             esac
         fi
     elif [[ ${#files_after_options[@]} -eq 0 ]]; then
-        error_exit "No files specified for diff operation." "$ERROR_INVALID_INPUT"
+        if command_exists gum; then
+            log_info "No files specified. Using gum to select files interactively."
+
+            local selected_original
+            selected_original=$(gum file)
+            if [[ -z "$selected_original" ]]; then
+                error_exit "No original file selected." "$ERROR_INVALID_INPUT"
+            fi
+
+            local selected_modified
+            selected_modified=$(gum file)
+            if [[ -z "$selected_modified" ]]; then
+                error_exit "No modified file selected." "$ERROR_INVALID_INPUT"
+            fi
+
+            original="$selected_original"
+            modified="$selected_modified"
+
+            validate_file "$original"
+            validate_file "$modified"
+
+            echo -e "${BLUE}Creating patch from '$original' to '$modified'...${RESET}"
+            if diff "${diff_options[@]}" -u "$original" "$modified" | tee "$output_file"; then
+                if [[ -s "$output_file" ]]; then
+                    echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+                else
+                    echo -e "${YELLOW}Files are identical - no differences found.${RESET}"
+                fi
+            else
+                local exit_code=$?
+                case $exit_code in
+                    1)
+                        if [[ -s "$output_file" ]]; then
+                            echo -e "${GREEN}Success: Differences found and saved to $output_file${RESET}"
+                        else
+                            error_exit "Diff found but patch file is empty." "$ERROR_GENERAL"
+                        fi
+                        ;;
+                    2) error_exit "One or both input files do not exist." "$ERROR_INVALID_INPUT" ;;
+                    *) error_exit "command failed with exit code $exit_code." "$ERROR_GENERAL" ;;
+                esac
+            fi
+        else
+            error_exit "No files specified for diff operation." "$ERROR_INVALID_INPUT"
+        fi
     else
         error_exit "Diff operation requires exactly two files (got ${#files_after_options[@]})." "$ERROR_INVALID_INPUT"
     fi

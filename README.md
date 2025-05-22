@@ -37,6 +37,7 @@ For manual installation, follow these steps to ensure the script is accessible s
 ### Dependencies
 Ensure you have the following installed:
 - **Bash 4.0+** (for core functionality).
+- **[Gum](https://github.com/charmbracelet/gum)** (because its yummy)
 - **Core utilities**: `diff`, `patch`.
 - **Optional VCS support**:
   - **Git 2.0+** (for Git integration).
